@@ -1,46 +1,82 @@
-# Getting Started with Create React App
+# MyTvmSpec
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Приложение для просмотра инструкций виртуальной машины TON (TVM) с возможностью поиска, фильтрации и настройки отображения.
 
-## Available Scripts
+## Функциональность
 
-In the project directory, you can run:
+- 🌙 Поддержка тёмной темы с переключателем
+- 📊 Таблица инструкций TVM со всеми данными из cp0.json
+- 🔍 Поиск по инструкциям с приоритизацией совпадений в имени
+- 🗂️ Фильтрация по категориям инструкций
+- ⚙️ Настройка отображаемых столбцов с сохранением в localStorage
+- 📱 Адаптивный дизайн для мобильных устройств
 
-### `npm start`
+## Технологии
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- React с TypeScript
+- React Table для создания таблицы
+- CSS переменные для управления темами
+- Современный UI в стиле Astro
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Начало работы
 
-### `npm test`
+### Предварительные требования
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- Node.js (рекомендуется версия 14 или выше)
+- npm или yarn
 
-### `npm run build`
+### Установка
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1. Клонируйте репозиторий:
+```bash
+git clone https://github.com/your-username/mytvm-spec.git
+cd mytvm-spec
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+2. Установите зависимости:
+```bash
+npm install
+# или
+yarn install
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+3. Скопируйте файл cp0.json в директорию src:
+```bash
+cp path/to/cp0.json src/
+```
 
-### `npm run eject`
+### Запуск
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+Для запуска приложения в режиме разработки выполните:
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```bash
+npm start
+# или
+yarn start
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+Приложение будет доступно по адресу [http://localhost:3000](http://localhost:3000).
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+### Сборка для продакшена
 
-## Learn More
+Для создания оптимизированной сборки выполните:
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```bash
+npm run build
+# или
+yarn build
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Собранные файлы будут доступны в директории `build/`.
+
+## Пользовательский интерфейс
+
+- **Переключатель темы**: Расположен в правом верхнем углу страницы.
+- **Поиск**: Позволяет искать инструкции по мнемонике и описанию.
+- **Фильтр по категории**: Выпадающий список для выбора конкретной категории инструкций.
+- **Настройка столбцов**: Чекбоксы для выбора отображаемых столбцов.
+- **Сортировка**: Клик по заголовку столбца для сортировки по возрастанию/убыванию.
+
+## Возможности кастомизации
+
+Для изменения логики поиска можно отредактировать функцию `searchFilter` в файле `src/components/InstructionsTable.tsx`.

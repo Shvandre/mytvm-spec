@@ -1,24 +1,33 @@
 import React from 'react';
-import logo from './logo.svg';
 import './App.css';
+import ThemeToggle from './components/ThemeToggle';
+import InstructionsTable from './components/InstructionsTable';
 
 function App() {
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
+      <ThemeToggle />
+      
+      <header className="header">
+        <div className="container">
+          <h1>TVM Instructions</h1>
+          <p className="description">
+            TON Virtual Machine (TVM) instructions database with search and filtering capabilities.
+          </p>
+        </div>
       </header>
+      
+      <main className="main">
+        <div className="container">
+          <InstructionsTable />
+        </div>
+      </main>
+      
+      <footer className="footer">
+        <div className="container">
+          <p>© {new Date().getFullYear()} MyTvmSpec</p>
+        </div>
+      </footer>
     </div>
   );
 }
