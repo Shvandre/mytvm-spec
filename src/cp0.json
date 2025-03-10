@@ -30138,7 +30138,7 @@
       "doc": {
         "category": "app_config",
         "description": "Retrieves `global_id` from 19 network config.",
-        "gas": "",
+        "gas": "26",
         "fift": "GLOBALID",
         "fift_examples": [],
         "opcode": "F835",
@@ -30164,8 +30164,8 @@
       "since_version": 6,
       "doc": {
         "category": "app_config",
-        "description": "Calculates gas fee",
-        "gas": "",
+        "description": "Calculates computation cost in nanotons for transaction that consumes gas_used gas.",
+        "gas": "26",
         "fift": "GETGASFEE",
         "fift_examples": [],
         "opcode": "F836",
@@ -30198,8 +30198,8 @@
       "since_version": 6,
       "doc": {
         "category": "app_config",
-        "description": "Calculates storage fees (only current StoragePrices entry is used).",
-        "gas": "",
+        "description": "Calculates storage fees in nanotons for contract based on current storage prices. cells and bits are the size of the AccountState (with deduplication, including root cell).",
+        "gas": "26",
         "fift": "GETSTORAGEFEE",
         "fift_examples": [],
         "opcode": "F837",
@@ -30230,8 +30230,8 @@
       "since_version": 6,
       "doc": {
         "category": "app_config",
-        "description": "Calculates forward fee.",
-        "gas": "",
+        "description": "Calculates forward fees in nanotons for outgoing message. is_mc is true if the source or the destination is in masterchain, false if both are in basechain. Note, cells and bits in Message should be counted with account for deduplication and root-is-not-counted rules.",
+        "gas": "26",
         "fift": "GETFORWARDFEE",
         "fift_examples": [],
         "opcode": "F838",
@@ -30262,7 +30262,7 @@
       "doc": {
         "category": "app_config",
         "description": "Returns gas usage for the current contract if it is precompiled, `null` otherwise.",
-        "gas": "",
+        "gas": "26",
         "fift": "GETPRECOMPILEDGAS",
         "fift_examples": [],
         "opcode": "F839",
@@ -30289,7 +30289,7 @@
       "doc": {
         "category": "app_config",
         "description": "Calculate `fwd_fee * 2^16 / first_frac`. Can be used to get the original `fwd_fee` of the message.",
-        "gas": "",
+        "gas": "26",
         "fift": "GETORIGINALFWDFEE",
         "fift_examples": [],
         "opcode": "F83A",
@@ -30323,7 +30323,7 @@
       "doc": {
         "category": "app_config",
         "description": "Same as `GETGASFEE`, but without flat price (just `(gas_used * price) / 2^16)`.",
-        "gas": "",
+        "gas": "26",
         "fift": "GETGASFEESIMPLE",
         "fift_examples": [],
         "opcode": "F83B",
@@ -30357,7 +30357,7 @@
       "doc": {
         "category": "app_config",
         "description": "Same as `GETFORWARDFEE`, but without lump price (just (`bits*bit_price + cells*cell_price) / 2^16`).",
-        "gas": "",
+        "gas": "26",
         "fift": "GETFORWARDFEESIMPLE",
         "fift_examples": [],
         "opcode": "F83C",
@@ -33677,7 +33677,7 @@
       "doc": {
         "category": "app_actions",
         "description": "Creates an output action and returns a fee for creating a message. Mode has the same effect as in the case of `SENDRAWMSG`. Additionally `+1024` means - do not create an action, only estimate fee. Other modes affect the fee calculation as follows: `+64` substitutes the entire balance of the incoming message as an outcoming value (slightly inaccurate, gas expenses that cannot be estimated before the computation is completed are not taken into account), `+128` substitutes the value of the entire balance of the contract before the start of the computation phase (slightly inaccurate, since gas expenses that cannot be estimated before the completion of the computation phase are not taken into account).",
-        "gas": "526",
+        "gas": "approx. 526 + CDATASIZE(msg)",
         "fift": "SENDMSG",
         "fift_examples": [],
         "opcode": "FB08",
