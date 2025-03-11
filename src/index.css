@@ -1,45 +1,55 @@
 :root {
-  /* Переменные светлой темы */
-  --background: #ffffff;
-  --text-color: #111827;
-  --muted-text-color: #4b5563;
-  --accent-color: #3b82f6;
-  --accent-color-rgb: 59, 130, 246;
+  /* Переменные светлой темы в стиле MaterialUI */
+  --background: #fafafa;
+  --text-color: #212121;
+  --muted-text-color: #757575;
+  --text-secondary: #616161;
+  --accent-color: #2196F3;
+  --accent-color-rgb: 33, 150, 243;
   --card-bg: #ffffff;
-  --card-header-bg: #f9fafb;
-  --border-color: #e5e7eb;
+  --card-header-bg: #f5f5f5;
+  --border-color: #e0e0e0;
   --input-bg: #ffffff;
-  --table-header-bg: #f9fafb;
-  --table-header-hover-bg: #f3f4f6;
-  --table-row-hover-bg: #f9fafb;
-  --tag-bg: #f3f4f6;
-  --tag-hover-bg: #e5e7eb;
+  --table-header-bg: #f5f5f5;
+  --table-header-hover-bg: #eeeeee;
+  --table-row-hover-bg: #f5f5f5;
+  --tag-bg: #f5f5f5;
+  --tag-hover-bg: #eeeeee;
   --shadow-color: rgba(0, 0, 0, 0.1);
-  --gradient-start: #3b82f6;
-  --gradient-end: #8b5cf6;
-  --code-bg: #f3f4f6;
+  --gradient-start: #2196F3;
+  --gradient-end: #673AB7;
+  --code-bg: #f5f5f5;
+  --link-color: #1976D2;
+  --accent-color-dark: #1976D2;
+  --accent-color-light: rgba(33, 150, 243, 0.1);
+  --bg-color: #fafafa;
 }
 
 [data-theme="dark"] {
-  /* Переменные тёмной темы */
-  --background: #0f172a;
-  --text-color: #f3f4f6;
-  --muted-text-color: #9ca3af;
-  --accent-color: #60a5fa;
-  --accent-color-rgb: 96, 165, 250;
-  --card-bg: #1e293b;
-  --card-header-bg: #1e293b;
-  --border-color: #334155;
-  --input-bg: #1e293b;
-  --table-header-bg: #1e293b;
-  --table-header-hover-bg: #334155;
-  --table-row-hover-bg: #2a3a52;
-  --tag-bg: #334155;
-  --tag-hover-bg: #475569;
-  --shadow-color: rgba(0, 0, 0, 0.3);
-  --gradient-start: #60a5fa;
-  --gradient-end: #a78bfa;
-  --code-bg: #2a3a52;
+  /* Переменные тёмной темы в стиле MaterialUI */
+  --background: #121212;
+  --text-color: #ffffff;
+  --muted-text-color: #b0b0b0;
+  --text-secondary: #9e9e9e;
+  --accent-color: #2196F3;
+  --accent-color-rgb: 33, 150, 243;
+  --card-bg: #1e1e1e;
+  --card-header-bg: #2c2c2c;
+  --border-color: #333333;
+  --input-bg: #2c2c2c;
+  --table-header-bg: #2c2c2c;
+  --table-header-hover-bg: #383838;
+  --table-row-hover-bg: #303030;
+  --tag-bg: #333333;
+  --tag-hover-bg: #444444;
+  --shadow-color: rgba(0, 0, 0, 0.5);
+  --gradient-start: #2196F3;
+  --gradient-end: #4A148C;
+  --code-bg: #333333;
+  --link-color: #64B5F6;
+  --accent-color-dark: #1976D2;
+  --accent-color-light: rgba(33, 150, 243, 0.25);
+  --bg-color: #121212;
 }
 
 /* Base styles */
