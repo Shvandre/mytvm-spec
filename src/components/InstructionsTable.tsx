@@ -7,7 +7,6 @@ import {
   useReactTable,
   FilterFn,
   getFilteredRowModel,
-  Column,
   ColumnResizeMode,
   Updater,
 } from '@tanstack/react-table';
@@ -194,21 +193,324 @@ const ExitFullscreenIcon = () => (
   </svg>
 );
 
+// Интерфейс для параметров поиска
+interface SearchParams {
+  searchQuery: string;
+  selectedCategory: string;
+}
+
+// Компонент SearchPanel
+interface SearchPanelProps {
+  categories: string[];
+  onSearch: (params: SearchParams) => void;
+  onToggleFullscreen: () => void;
+  isFullscreen: boolean;
+  onToggleColumnVisibility: (columnId: string) => void;
+  visibleColumns: Record<string, boolean>;
+  columns: any[];
+  currentSearchParams: SearchParams;
+}
+
+const SearchPanel: React.FC<SearchPanelProps> = ({
+  categories,
+  onSearch,
+  onToggleFullscreen,
+  isFullscreen,
+  onToggleColumnVisibility,
+  visibleColumns,
+  columns,
+  currentSearchParams
+}) => {
+  const [searchQuery, setSearchQuery] = useState(currentSearchParams.searchQuery);
+  const [selectedCategory, setSelectedCategory] = useState<string>(currentSearchParams.selectedCategory);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Синхронизация props с состоянием при их изменении
+  useEffect(() => {
+    setSearchQuery(currentSearchParams.searchQuery);
+    setSelectedCategory(currentSearchParams.selectedCategory);
+  }, [currentSearchParams]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('Search input changed:', e.target.value);
+    setSearchQuery(e.target.value);
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    console.log('Search input keydown:', e.key);
+    if (e.key === 'Enter') {
+      console.log('Enter pressed, sending search to parent');
+      onSearch({ searchQuery, selectedCategory });
+      // Не очищаем поле поиска
+    }
+  };
+
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newCategory = e.target.value;
+    setSelectedCategory(newCategory);
+    onSearch({ searchQuery, selectedCategory: newCategory });
+  };
+
+  const handleSearchFocus = () => {
+    console.log('Search input focused');
+  };
+
+  const handleSearchBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    console.log('Search input blurred, relatedTarget:', 
+      e.relatedTarget?.tagName, 
+      e.relatedTarget?.id
+    );
+  };
+
+  // Исполнить поиск при нажатии на кнопку
+  const handleSearchButtonClick = () => {
+    onSearch({ searchQuery, selectedCategory });
+  };
+
+  return (
+    <div className="search-container">
+      <div className="table-controls">
+        <div className="search-filter">
+          <input
+            ref={searchInputRef}
+            type="text"
+            id="search-instructions"
+            name="search-instructions"
+            placeholder="Search instructions..."
+            value={searchQuery}
+            onChange={handleSearchChange}
+            onKeyDown={handleSearchKeyDown}
+            onFocus={handleSearchFocus}
+            onBlur={handleSearchBlur}
+            className="search-input"
+          />
+          
+          <button 
+            type="button"
+            onClick={handleSearchButtonClick}
+            className="search-button"
+          >
+            Search
+          </button>
+          
+          <select
+            value={selectedCategory}
+            onChange={handleCategoryChange}
+            className="category-select"
+            id="category-filter"
+            name="category-filter"
+          >
+            <option value="">All categories</option>
+            {categories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+          
+          <button 
+            className="fullscreen-btn"
+            onClick={onToggleFullscreen}
+            title={isFullscreen ? "Exit fullscreen" : "Fullscreen mode"}
+          >
+            {isFullscreen ? <ExitFullscreenIcon /> : <FullscreenIcon />}
+            <span className="fullscreen-text">
+              {isFullscreen ? "Exit" : "Fullscreen"}
+            </span>
+          </button>
+        </div>
+        
+        <div className="column-toggles">
+          <div className="toggle-title">Show columns:</div>
+          <div className="toggle-buttons">
+            {columns.map((column) => {
+              // Check that column.id exists
+              if (!column.id) return null;
+              
+              return (
+                <label key={column.id} className="toggle-label">
+                  <input
+                    type="checkbox"
+                    checked={visibleColumns[column.id] || false}
+                    onChange={() => column.id && onToggleColumnVisibility(column.id)}
+                  />
+                  {column.id === 'category' ? 'Category' : 
+                   column.id === 'mnemonic' ? 'Mnemonic' :
+                   column.id === 'description' ? 'Description' :
+                   column.id === 'gas' ? 'Gas' :
+                   column.id === 'opcode' ? 'Opcode' :
+                   column.id === 'stack' ? 'Stack' :
+                   column.id === 'fift' ? 'Fift' :
+                   column.id === 'tlb' ? 'TLB' :
+                   column.id === 'prefix' ? 'Prefix' :
+                   column.id}
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Компонент TableView
+interface TableViewProps {
+  data: Instruction[];
+  columns: any[];
+  visibleColumns: Record<string, boolean>;
+  searchQuery: string;
+  columnSizing: Record<string, number>;
+  columnSizingInfo: any;
+  onColumnSizingChange: (updaterOrValue: Updater<Record<string, number>>) => void;
+  onColumnSizingInfoChange: (info: any) => void;
+}
+
+const TableView: React.FC<TableViewProps> = ({
+  data,
+  columns,
+  visibleColumns,
+  searchQuery,
+  columnSizing,
+  columnSizingInfo,
+  onColumnSizingChange,
+  onColumnSizingInfoChange
+}) => {
+  // Check if a column is currently being resized
+  const isColumnResizing = (id: string): boolean => {
+    return columnSizingInfo?.isResizingColumn === id;
+  };
+
+  const table = useReactTable({
+    data,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    state: {
+      globalFilter: searchQuery,
+      columnVisibility: visibleColumns,
+      columnSizing,
+      columnSizingInfo,
+    },
+    filterFns: {
+      search: searchFilter,
+    },
+    globalFilterFn: searchFilter,
+    columnResizeMode: 'onChange' as ColumnResizeMode,
+    onColumnSizingChange,
+    onColumnSizingInfoChange,
+  });
+
+  const handleTableClick = (e: React.MouseEvent) => {
+    console.log('Table click:', 
+      (e.target as HTMLElement)?.tagName, 
+      (e.target as HTMLElement)?.className
+    );
+  };
+
+  return (
+    <div 
+      className="table-wrapper"
+      onScroll={() => {
+        console.log('Table scroll');
+      }}
+    >
+      <table 
+        tabIndex={-1}
+        style={{ width: table.getTotalSize() }}
+        onClick={handleTableClick}
+      >
+        <thead>
+          {table.getHeaderGroups().map(headerGroup => (
+            <tr key={headerGroup.id}>
+              {headerGroup.headers.map(header => {
+                if (!header.column.id) return null;
+                
+                if (!visibleColumns[header.column.id]) {
+                  return null;
+                }
+                
+                return (
+                  <th 
+                    key={header.id} 
+                    onClick={header.column.getToggleSortingHandler()}
+                    style={{ 
+                      width: header.getSize(), 
+                      position: 'relative' 
+                    }}
+                    className={isColumnResizing(header.column.id) ? 'resizing' : ''}
+                  >
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
+                    {{
+                      asc: ' ↑',
+                      desc: ' ↓',
+                    }[header.column.getIsSorted() as string] ?? null}
+                    
+                    {/* Resizer */}
+                    <div
+                      {...{
+                        onMouseDown: header.getResizeHandler(),
+                        onTouchStart: header.getResizeHandler(),
+                        className: `resizer ${isColumnResizing(header.column.id) ? 'isResizing' : ''}`,
+                      }}
+                    />
+                  </th>
+                );
+              })}
+            </tr>
+          ))}
+        </thead>
+        <tbody tabIndex={-1}>
+          {table.getRowModel().rows.map(row => (
+            <tr key={row.id} tabIndex={-1}>
+              {row.getVisibleCells().map(cell => {
+                if (!cell.column.id || !visibleColumns[cell.column.id]) return null;
+                
+                return (
+                  <td 
+                    key={cell.id}
+                    style={{ width: cell.column.getSize() }}
+                    data-content={String(flexRender(cell.column.columnDef.cell, cell.getContext()))}
+                    tabIndex={-1}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+// Основной компонент, который объединяет SearchPanel и TableView
 const InstructionsTable: React.FC = () => {
   const instructions = (instructionsData as any).instructions as Instruction[];
   const [data] = useState<Instruction[]>(instructions);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [filteredData, setFilteredData] = useState<Instruction[]>(instructions);
+  const [currentSearchParams, setCurrentSearchParams] = useState<SearchParams>({
+    searchQuery: '',
+    selectedCategory: '',
+  });
+  
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() => 
     loadObjectPreference('visibleColumns', defaultColumnVisibility)
   );
+  
   const [isFullscreen, setIsFullscreen] = useState<boolean>(() => 
     loadBooleanPreference('isFullscreen', false)
   );
+  
   const [columnSizing, setColumnSizing] = useState<Record<string, number>>(() => 
     loadObjectPreference('columnSizing', defaultColumnWidths)
   );
+  
   const [columnSizingInfo, setColumnSizingInfo] = useState<any>({
     columnSizingStart: {},
     deltaOffset: {},
@@ -217,91 +519,9 @@ const InstructionsTable: React.FC = () => {
     startOffset: null,
     startSize: null
   });
-  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Get list of categories
   const categories = useMemo(() => getUniqueCategories(data), [data]);
-
-  // Добавляем отладочный useEffect
-  useEffect(() => {
-    const handleFocusChange = () => {
-      console.log('FOCUS CHANGED, active element:', 
-        document.activeElement?.tagName,
-        document.activeElement?.id,
-        'at:', new Date().toISOString()
-      );
-    };
-
-    document.addEventListener('focusin', handleFocusChange);
-    return () => document.removeEventListener('focusin', handleFocusChange);
-  }, []);
-
-  // Добавляем отслеживание DOM-мутаций
-  useEffect(() => {
-    if (typeof MutationObserver !== 'undefined') {
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          console.log('DOM mutation detected:', {
-            type: mutation.type,
-            target: (mutation.target as HTMLElement)?.tagName,
-            activeElement: document.activeElement?.tagName,
-            activeElementId: document.activeElement?.id,
-            time: new Date().toISOString()
-          });
-        });
-      });
-      
-      const appElement = document.querySelector('.instructions-table-container');
-      if (appElement) {
-        observer.observe(appElement, { 
-          childList: true, 
-          subtree: true,
-          attributes: true,
-          characterData: true
-        });
-      }
-      
-      return () => observer.disconnect();
-    }
-  }, []);
-
-  // Добавляем отслеживание глобальных событий мыши
-  useEffect(() => {
-    const handleMouseDown = (e: MouseEvent) => {
-      console.log('GLOBAL MOUSEDOWN:', 
-        (e.target as HTMLElement)?.tagName,
-        (e.target as HTMLElement)?.id,
-        'activeElement:', 
-        document.activeElement?.tagName,
-        document.activeElement?.id,
-        'at:', new Date().toISOString()
-      );
-    };
-    
-    window.addEventListener('mousedown', handleMouseDown, true);
-    return () => window.removeEventListener('mousedown', handleMouseDown, true);
-  }, []);
-  
-  // Добавляем отладочный обработчик глобальных событий клавиатуры
-  useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      console.log('GLOBAL KEYDOWN:', e.key, 
-        'target:', (e.target as HTMLElement)?.tagName, 
-        (e.target as HTMLElement)?.id,
-        'active:', document.activeElement?.tagName,
-        document.activeElement?.id,
-        'keyCode:', e.keyCode
-      );
-      
-      // Восстанавливаем обработчик для выхода из полноэкранного режима
-      if (e.key === 'Escape' && isFullscreen) {
-        setIsFullscreen(false);
-      }
-    };
-    
-    window.addEventListener('keydown', handleGlobalKeyDown, true);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown, true);
-  }, [isFullscreen]);
 
   // Save settings when changed
   useEffect(() => {
@@ -316,12 +536,23 @@ const InstructionsTable: React.FC = () => {
     localStorage.setItem('isFullscreen', JSON.stringify(isFullscreen));
   }, [isFullscreen]);
 
+  // Добавляем отслеживание глобальных событий клавиатуры
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Восстанавливаем обработчик для выхода из полноэкранного режима
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    
+    window.addEventListener('keydown', handleGlobalKeyDown, true);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown, true);
+  }, [isFullscreen]);
+
   // Логирование рендеров компонента
   console.log('InstructionsTable render', { 
     isFullscreen, 
-    searchQuery, 
-    debouncedSearchQuery,
-    selectedCategory,
+    currentSearchParams,
     now: new Date().toISOString() 
   });
 
@@ -402,21 +633,24 @@ const InstructionsTable: React.FC = () => {
     }),
   ], [columnHelper, columnSizing]);
 
-  // Apply filters to data
-  const filteredData = useMemo(() => {
-    console.log('Recalculating filteredData');
-    return data.filter(item => {
-      // Filter by category
-      if (selectedCategory) {
+  // Функция применения поиска и фильтрации
+  const applySearch = useCallback((searchParams: SearchParams) => {
+    console.log('Applying search:', searchParams);
+    setCurrentSearchParams(searchParams);
+    
+    // Фильтрация данных
+    const filtered = data.filter(item => {
+      // Фильтр по категории
+      if (searchParams.selectedCategory) {
         const mappedCategory = categoryMapping[item.doc.category] || item.doc.category;
-        if (mappedCategory !== selectedCategory) {
+        if (mappedCategory !== searchParams.selectedCategory) {
           return false;
         }
       }
       
-      // Filter by search query
-      if (debouncedSearchQuery) {
-        const query = debouncedSearchQuery.toLowerCase();
+      // Фильтр по поисковому запросу
+      if (searchParams.searchQuery) {
+        const query = searchParams.searchQuery.toLowerCase();
         const mnemonic = item.mnemonic.toLowerCase();
         const description = item.doc.description?.toLowerCase() || '';
         
@@ -437,13 +671,11 @@ const InstructionsTable: React.FC = () => {
       
       return true;
     });
-  }, [data, selectedCategory, debouncedSearchQuery]);
+    
+    setFilteredData(filtered);
+  }, [data]);
 
-  // Column resizing handling
-  const handleColumnResize = useCallback((columnSizingInfo: any) => {
-    setColumnSizingInfo(columnSizingInfo);
-  }, []);
-
+  // Обработчики для управления изменением размеров колонок
   const handleColumnSizingChange = useCallback((updaterOrValue: Updater<Record<string, number>>) => {
     if (typeof updaterOrValue === 'function') {
       setColumnSizing(prev => updaterOrValue(prev));
@@ -452,299 +684,38 @@ const InstructionsTable: React.FC = () => {
     }
   }, []);
 
-  const handleColumnResizeEnd = useCallback(() => {
-    setColumnSizingInfo({
-      columnSizingStart: {},
-      deltaOffset: {},
-      deltaPercentage: {},
-      isResizingColumn: false,
-      startOffset: null,
-      startSize: null
-    });
-    
-    localStorage.setItem('columnSizing', JSON.stringify(columnSizing));
-  }, [columnSizing]);
-
-  const table = useReactTable({
-    data: filteredData,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    state: {
-      globalFilter: debouncedSearchQuery,
-      columnVisibility: visibleColumns,
-      columnSizing,
-      columnSizingInfo,
-    },
-    filterFns: {
-      search: searchFilter,
-    },
-    globalFilterFn: searchFilter,
-    columnResizeMode: 'onChange' as ColumnResizeMode,
-    onColumnSizingChange: handleColumnSizingChange,
-    onColumnSizingInfoChange: handleColumnResize,
-  });
-
-  // Check if a column is currently being resized
-  const isColumnResizing = (id: string): boolean => {
-    return columnSizingInfo?.isResizingColumn === id;
-  };
-
-  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedCategory(e.target.value);
-  };
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('Search input changed:', e.target.value, 'activeElement:', document.activeElement?.id);
-    
-    // Запомните активный элемент до обновления состояния
-    const activeElementBefore = document.activeElement;
-    
-    setSearchQuery(e.target.value);
-    
-    // Проверьте после микротаска (после обновления состояния React)
-    setTimeout(() => {
-      console.log('After search change timeout check', 
-        'activeElement before:', activeElementBefore?.id,
-        'activeElement now:', document.activeElement?.id,
-        'same?', activeElementBefore === document.activeElement
-      );
-      
-      // Если фокус потерян, восстановите его
-      if (activeElementBefore !== document.activeElement && searchInputRef.current) {
-        console.log('Focus was lost during search update, restoring');
-        searchInputRef.current.focus();
-      }
-    }, 0);
-  };
-
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    console.log('Search input keydown:', e.key);
-    if (e.key === 'Enter') {
-      console.log('Enter pressed, updating debounced query');
-      setDebouncedSearchQuery(searchQuery);
-    }
-  };
-
-  const handleSearchFocus = () => {
-    console.log('Search input focused');
-  };
-
-  const handleSearchBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    console.log('Search input blurred, relatedTarget:', 
-      e.relatedTarget?.tagName, 
-      e.relatedTarget?.id
-    );
-  };
-
-  // Функция принудительного восстановления фокуса
-  const refocusSearchInput = useCallback(() => {
-    if (searchInputRef.current) {
-      console.log('Forcing refocus to search input');
-      searchInputRef.current.focus();
-    }
+  const handleColumnSizingInfoChange = useCallback((info: any) => {
+    setColumnSizingInfo(info);
   }, []);
 
-  // Добавляем обработчик клика для всего компонента
-  const handleComponentClick = (e: React.MouseEvent) => {
-    if (document.activeElement !== searchInputRef.current) {
-      console.log('Click detected when search is not focused', 
-        'clicked:', (e.target as HTMLElement)?.tagName,
-        'active:', document.activeElement?.tagName
-      );
-    }
-  };
-
-  // Main table component
+  // Основной компонент таблицы
   const TableComponent = () => (
-    <div 
-      className="instructions-table-container"
-      onClick={handleComponentClick}
-      onMouseDown={(e) => {
-        console.log('Table container mousedown:', 
-          (e.target as HTMLElement)?.tagName, 
-          (e.target as HTMLElement)?.id,
-          'activeElement:', 
-          document.activeElement?.tagName,
-          document.activeElement?.id
-        );
-      }}
-    >
-      <div className="table-controls">
-        <div className="search-filter">
-          <input
-            ref={searchInputRef}
-            type="text"
-            id="search-instructions"
-            name="search-instructions"
-            placeholder="Search instructions..."
-            value={searchQuery}
-            onChange={handleSearchChange}
-            onKeyDown={handleSearchKeyDown}
-            onFocus={handleSearchFocus}
-            onBlur={handleSearchBlur}
-            className="search-input"
-          />
-          
-          <button 
-            type="button" 
-            onClick={refocusSearchInput}
-            className="debug-focus-button"
-            style={{ fontSize: '12px', padding: '2px 5px', marginLeft: '5px' }}
-          >
-            Вернуть фокус
-          </button>
-          
-          <select
-            value={selectedCategory}
-            onChange={handleCategoryChange}
-            className="category-select"
-            id="category-filter"
-            name="category-filter"
-          >
-            <option value="">All categories</option>
-            {categories.map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
-          </select>
-          
-          <button 
-            className="fullscreen-btn"
-            onClick={toggleFullscreen}
-            title={isFullscreen ? "Exit fullscreen" : "Fullscreen mode"}
-          >
-            {isFullscreen ? <ExitFullscreenIcon /> : <FullscreenIcon />}
-            <span className="fullscreen-text">
-              {isFullscreen ? "Exit" : "Fullscreen"}
-            </span>
-          </button>
-        </div>
-        
-        <div className="column-toggles">
-          <div className="toggle-title">Show columns:</div>
-          <div className="toggle-buttons">
-            {columns.map((column) => {
-              // Check that column.id exists
-              if (!column.id) return null;
-              
-              return (
-                <label key={column.id} className="toggle-label">
-                  <input
-                    type="checkbox"
-                    checked={visibleColumns[column.id] || false}
-                    onChange={() => column.id && toggleColumnVisibility(column.id)}
-                  />
-                  {column.id === 'category' ? 'Category' : 
-                   column.id === 'mnemonic' ? 'Mnemonic' :
-                   column.id === 'description' ? 'Description' :
-                   column.id === 'gas' ? 'Gas' :
-                   column.id === 'opcode' ? 'Opcode' :
-                   column.id === 'stack' ? 'Stack' :
-                   column.id === 'fift' ? 'Fift' :
-                   column.id === 'tlb' ? 'TLB' :
-                   column.id === 'prefix' ? 'Prefix' :
-                   column.id}
-                </label>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+    <div className="instructions-table-container">
+      <SearchPanel 
+        categories={categories}
+        onSearch={applySearch}
+        onToggleFullscreen={toggleFullscreen}
+        isFullscreen={isFullscreen}
+        onToggleColumnVisibility={toggleColumnVisibility}
+        visibleColumns={visibleColumns}
+        columns={columns}
+        currentSearchParams={currentSearchParams}
+      />
       
-      <div 
-        className="table-wrapper"
-        onScroll={() => {
-          console.log('Table scroll, activeElement:', 
-            document.activeElement?.tagName,
-            document.activeElement?.id
-          );
-        }}
-      >
-        <table 
-          tabIndex={-1}
-          style={{ width: table.getTotalSize() }}
-          onClick={(e) => {
-            console.log('Table click:', 
-              (e.target as HTMLElement)?.tagName, 
-              (e.target as HTMLElement)?.className,
-              'activeElement:', 
-              document.activeElement?.tagName,
-              document.activeElement?.id
-            );
-          }}
-        >
-          <thead>
-            {table.getHeaderGroups().map(headerGroup => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map(header => {
-                  if (!header.column.id) return null;
-                  
-                  if (!visibleColumns[header.column.id]) {
-                    return null;
-                  }
-                  
-                  return (
-                    <th 
-                      key={header.id} 
-                      onClick={header.column.getToggleSortingHandler()}
-                      style={{ 
-                        width: header.getSize(), 
-                        position: 'relative' 
-                      }}
-                      className={isColumnResizing(header.column.id) ? 'resizing' : ''}
-                    >
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                      {{
-                        asc: ' ↑',
-                        desc: ' ↓',
-                      }[header.column.getIsSorted() as string] ?? null}
-                      
-                      {/* Resizer */}
-                      <div
-                        {...{
-                          onMouseDown: header.getResizeHandler(),
-                          onTouchStart: header.getResizeHandler(),
-                          className: `resizer ${isColumnResizing(header.column.id) ? 'isResizing' : ''}`,
-                        }}
-                      />
-                    </th>
-                  );
-                })}
-              </tr>
-            ))}
-          </thead>
-          <tbody tabIndex={-1}>
-            {table.getRowModel().rows.map(row => (
-              <tr key={row.id} tabIndex={-1}>
-                {row.getVisibleCells().map(cell => {
-                  if (!cell.column.id || !visibleColumns[cell.column.id]) return null;
-                  
-                  return (
-                    <td 
-                      key={cell.id}
-                      style={{ width: cell.column.getSize() }}
-                      data-content={String(flexRender(cell.column.columnDef.cell, cell.getContext()))}
-                      tabIndex={-1}
-                    >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <TableView 
+        data={filteredData}
+        columns={columns}
+        visibleColumns={visibleColumns}
+        searchQuery={currentSearchParams.searchQuery}
+        columnSizing={columnSizing}
+        columnSizingInfo={columnSizingInfo}
+        onColumnSizingChange={handleColumnSizingChange}
+        onColumnSizingInfoChange={handleColumnSizingInfoChange}
+      />
     </div>
   );
 
-  // Render in fullscreen mode or normal mode
+  // Рендеринг в полноэкранном режиме или обычном режиме
   return isFullscreen ? (
     <div className="fullscreen-container">
       <TableComponent />
