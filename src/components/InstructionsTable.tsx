@@ -199,7 +199,6 @@ const InstructionsTable: React.FC = () => {
   const [data] = useState<Instruction[]>(instructions);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() => 
     loadObjectPreference('visibleColumns', defaultColumnVisibility)
@@ -218,45 +217,90 @@ const InstructionsTable: React.FC = () => {
     startOffset: null,
     startSize: null
   });
-
-  // Хранение ссылки на поле ввода для сохранения фокуса
   const searchInputRef = useRef<HTMLInputElement>(null);
-  
-  // Вспомогательная функция для сохранения и восстановления фокуса
-  const preserveFocus = (callback: () => void) => {
-    // Сохраняем текущий фокус
-    const activeElement = document.activeElement;
-    const activeElementSelectionStart = activeElement instanceof HTMLInputElement ? activeElement.selectionStart : null;
-    const activeElementSelectionEnd = activeElement instanceof HTMLInputElement ? activeElement.selectionEnd : null;
-    
-    // Выполняем операцию
-    callback();
-    
-    // Восстанавливаем фокус после обновления
-    // Используем requestAnimationFrame для более надежного восстановления фокуса
-    requestAnimationFrame(() => {
-      if (activeElement && activeElement instanceof HTMLInputElement && document.body.contains(activeElement)) {
-        activeElement.focus({preventScroll: true}); // Предотвращаем прокрутку при восстановлении фокуса
-        if (activeElementSelectionStart !== null && activeElementSelectionEnd !== null) {
-          activeElement.setSelectionRange(activeElementSelectionStart, activeElementSelectionEnd);
-        }
-      }
-    });
-  };
 
   // Get list of categories
   const categories = useMemo(() => getUniqueCategories(data), [data]);
 
-  // Handle ESC key to exit fullscreen
+  // Добавляем отладочный useEffect
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleFocusChange = () => {
+      console.log('FOCUS CHANGED, active element:', 
+        document.activeElement?.tagName,
+        document.activeElement?.id,
+        'at:', new Date().toISOString()
+      );
+    };
+
+    document.addEventListener('focusin', handleFocusChange);
+    return () => document.removeEventListener('focusin', handleFocusChange);
+  }, []);
+
+  // Добавляем отслеживание DOM-мутаций
+  useEffect(() => {
+    if (typeof MutationObserver !== 'undefined') {
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          console.log('DOM mutation detected:', {
+            type: mutation.type,
+            target: (mutation.target as HTMLElement)?.tagName,
+            activeElement: document.activeElement?.tagName,
+            activeElementId: document.activeElement?.id,
+            time: new Date().toISOString()
+          });
+        });
+      });
+      
+      const appElement = document.querySelector('.instructions-table-container');
+      if (appElement) {
+        observer.observe(appElement, { 
+          childList: true, 
+          subtree: true,
+          attributes: true,
+          characterData: true
+        });
+      }
+      
+      return () => observer.disconnect();
+    }
+  }, []);
+
+  // Добавляем отслеживание глобальных событий мыши
+  useEffect(() => {
+    const handleMouseDown = (e: MouseEvent) => {
+      console.log('GLOBAL MOUSEDOWN:', 
+        (e.target as HTMLElement)?.tagName,
+        (e.target as HTMLElement)?.id,
+        'activeElement:', 
+        document.activeElement?.tagName,
+        document.activeElement?.id,
+        'at:', new Date().toISOString()
+      );
+    };
+    
+    window.addEventListener('mousedown', handleMouseDown, true);
+    return () => window.removeEventListener('mousedown', handleMouseDown, true);
+  }, []);
+  
+  // Добавляем отладочный обработчик глобальных событий клавиатуры
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      console.log('GLOBAL KEYDOWN:', e.key, 
+        'target:', (e.target as HTMLElement)?.tagName, 
+        (e.target as HTMLElement)?.id,
+        'active:', document.activeElement?.tagName,
+        document.activeElement?.id,
+        'keyCode:', e.keyCode
+      );
+      
+      // Восстанавливаем обработчик для выхода из полноэкранного режима
       if (e.key === 'Escape' && isFullscreen) {
-        setIsFullscreen(() => false);
+        setIsFullscreen(false);
       }
     };
     
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleGlobalKeyDown, true);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown, true);
   }, [isFullscreen]);
 
   // Save settings when changed
@@ -272,31 +316,31 @@ const InstructionsTable: React.FC = () => {
     localStorage.setItem('isFullscreen', JSON.stringify(isFullscreen));
   }, [isFullscreen]);
 
-  // Обновляем toggleColumnVisibility с использованием функции preserveFocus
+  // Логирование рендеров компонента
+  console.log('InstructionsTable render', { 
+    isFullscreen, 
+    searchQuery, 
+    debouncedSearchQuery,
+    selectedCategory,
+    now: new Date().toISOString() 
+  });
+
   const toggleColumnVisibility = (columnId: string) => {
-    preserveFocus(() => {
-      setVisibleColumns(prev => ({
+    setVisibleColumns(prev => ({
+      ...prev,
+      [columnId]: !prev[columnId]
+    }));
+    
+    if (!visibleColumns[columnId] && !columnSizing[columnId]) {
+      setColumnSizing(prev => ({
         ...prev,
-        [columnId]: !prev[columnId]
+        [columnId]: defaultColumnWidths[columnId as keyof typeof defaultColumnWidths]
       }));
-      
-      // Сохраняем предыдущие размеры колонок и не меняем их при скрытии/показе
-      // Если колонка становится видимой и у неё нет сохраненной ширины, 
-      // используем значение по умолчанию
-      if (!visibleColumns[columnId] && !columnSizing[columnId]) {
-        setColumnSizing(prev => ({
-          ...prev,
-          [columnId]: defaultColumnWidths[columnId as keyof typeof defaultColumnWidths]
-        }));
-      }
-    });
+    }
   };
 
-  // Обновляем toggleFullscreen с использованием функции preserveFocus
   const toggleFullscreen = () => {
-    preserveFocus(() => {
-      setIsFullscreen(prev => !prev);
-    });
+    setIsFullscreen(prev => !prev);
   };
 
   const columnHelper = createColumnHelper<Instruction>();
@@ -360,6 +404,7 @@ const InstructionsTable: React.FC = () => {
 
   // Apply filters to data
   const filteredData = useMemo(() => {
+    console.log('Recalculating filteredData');
     return data.filter(item => {
       // Filter by category
       if (selectedCategory) {
@@ -399,42 +444,15 @@ const InstructionsTable: React.FC = () => {
     setColumnSizingInfo(columnSizingInfo);
   }, []);
 
-  // Обработчик изменения размеров колонок
   const handleColumnSizingChange = useCallback((updaterOrValue: Updater<Record<string, number>>) => {
-    // Сохраняем фокус и состояние выделения перед изменением размеров
-    const activeElement = document.activeElement;
-    const activeElementSelectionStart = activeElement instanceof HTMLInputElement ? activeElement.selectionStart : null;
-    const activeElementSelectionEnd = activeElement instanceof HTMLInputElement ? activeElement.selectionEnd : null;
-    
-    // Если updaterOrValue - функция, вызываем её с текущим состоянием
     if (typeof updaterOrValue === 'function') {
       setColumnSizing(prev => updaterOrValue(prev));
     } else {
-      // Если updaterOrValue - объект, просто устанавливаем его как новое состояние
       setColumnSizing(updaterOrValue);
     }
-    
-    // Восстанавливаем фокус и выделение
-    setTimeout(() => {
-      if (activeElement && activeElement instanceof HTMLInputElement && document.body.contains(activeElement)) {
-        activeElement.focus();
-        if (activeElementSelectionStart !== null && activeElementSelectionEnd !== null) {
-          activeElement.setSelectionRange(activeElementSelectionStart, activeElementSelectionEnd);
-        }
-      }
-    }, 0);
-    
-    // Не сохраняем в localStorage при каждом изменении, чтобы избежать частых записей
-    // Сохранение произойдет в handleColumnResizeEnd
   }, []);
 
   const handleColumnResizeEnd = useCallback(() => {
-    // Сохраняем текущий активный элемент
-    const activeElement = document.activeElement;
-    const activeElementSelectionStart = activeElement instanceof HTMLInputElement ? activeElement.selectionStart : null;
-    const activeElementSelectionEnd = activeElement instanceof HTMLInputElement ? activeElement.selectionEnd : null;
-    
-    // Update column sizing when resize ends
     setColumnSizingInfo({
       columnSizingStart: {},
       deltaOffset: {},
@@ -444,21 +462,7 @@ const InstructionsTable: React.FC = () => {
       startSize: null
     });
     
-    // Сохраняем текущие размеры колонок в localStorage
     localStorage.setItem('columnSizing', JSON.stringify(columnSizing));
-    
-    // Восстанавливаем фокус на активном элементе, если это было поле ввода
-    if (activeElement && activeElement instanceof HTMLInputElement) {
-      setTimeout(() => {
-        if (document.contains(activeElement)) {
-          activeElement.focus();
-          // Восстанавливаем позицию курсора
-          if (activeElementSelectionStart !== null && activeElementSelectionEnd !== null) {
-            activeElement.setSelectionRange(activeElementSelectionStart, activeElementSelectionEnd);
-          }
-        }
-      }, 0);
-    }
   }, [columnSizing]);
 
   const table = useReactTable({
@@ -487,147 +491,110 @@ const InstructionsTable: React.FC = () => {
     return columnSizingInfo?.isResizingColumn === id;
   };
 
-  // Сохраняем фокус при обновлении данных таблицы
-  useEffect(() => {
-    // Проверяем, было ли поле ввода в фокусе перед обновлением
-    const inputWasFocused = document.activeElement === searchInputRef.current;
-    
-    // Если поле ввода было в фокусе, восстановим фокус после обновления данных
-    if (inputWasFocused && searchInputRef.current) {
-      const selectionStart = searchInputRef.current.selectionStart;
-      const selectionEnd = searchInputRef.current.selectionEnd;
-      
-      // Используем setTimeout для выполнения после обновления DOM
-      setTimeout(() => {
-        if (searchInputRef.current) {
-          searchInputRef.current.focus();
-          searchInputRef.current.setSelectionRange(selectionStart, selectionEnd);
-        }
-      }, 0);
-    }
-  }, [filteredData, table.getRowModel()]);
-
-  // Добавляем обработчики для ресайзинга на уровне document
-  useEffect(() => {
-    const handleMouseUp = () => {
-      if (columnSizingInfo?.isResizingColumn) {
-        // Сохраняем информацию о текущем элементе в фокусе перед завершением ресайзинга
-        const activeElement = document.activeElement;
-        const activeElementSelectionStart = activeElement instanceof HTMLInputElement ? activeElement.selectionStart : null;
-        const activeElementSelectionEnd = activeElement instanceof HTMLInputElement ? activeElement.selectionEnd : null;
-        
-        handleColumnResizeEnd();
-        
-        // Восстанавливаем фокус на активном элементе, если это было поле ввода
-        if (activeElement && activeElement instanceof HTMLInputElement) {
-          setTimeout(() => {
-            if (document.contains(activeElement)) {
-              activeElement.focus();
-              // Восстанавливаем позицию курсора
-              if (activeElementSelectionStart !== null && activeElementSelectionEnd !== null) {
-                activeElement.setSelectionRange(activeElementSelectionStart, activeElementSelectionEnd);
-              }
-            }
-          }, 0);
-        }
-      }
-    };
-    
-    document.addEventListener('mouseup', handleMouseUp);
-    document.addEventListener('touchend', handleMouseUp);
-    
-    return () => {
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('touchend', handleMouseUp);
-    };
-  }, [columnSizingInfo, handleColumnResizeEnd]);
-
-  // Изменяем обработчик выбора категории, используя функцию preserveFocus
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    preserveFocus(() => {
-      setSelectedCategory(e.target.value);
-    });
+    setSelectedCategory(e.target.value);
   };
 
-  // Добавляем отмену всплытия событий мыши при клике на поле ввода поиска
-  const handleSearchInputMouseDown = (e: React.MouseEvent<HTMLInputElement>) => {
-    e.stopPropagation(); // Предотвращаем всплытие события и перехват фокуса другими элементами
-  };
-
-  // Обработчик клика на таблицу, чтобы не сбрасывать фокус, если кликнули мимо элемента управления
-  const handleTableContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Убираем автоматическое предотвращение потери фокуса, чтобы избежать цикла перехвата фокуса
-    // Если нужно сохранить фокус для конкретного элемента, это должно делаться явно
-    
-    // if (debugMode) {
-    //   console.log('Table container clicked');
-    // }
-  };
-
-  // Обработчик изменения запроса поиска с сохранением фокуса
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Сохраняем текущую позицию курсора и выделения перед изменением состояния
-    const selectionStart = e.target.selectionStart;
-    const selectionEnd = e.target.selectionEnd;
+    console.log('Search input changed:', e.target.value, 'activeElement:', document.activeElement?.id);
     
-    // Используем preserveFocus для сохранения фокуса при обновлении состояния
-    preserveFocus(() => {
-      setSearchQuery(e.target.value);
-      setDebouncedSearchQuery(e.target.value); // Сразу обновляем debounced значение
-    });
+    // Запомните активный элемент до обновления состояния
+    const activeElementBefore = document.activeElement;
     
-    // if (debugMode) {
-    //   console.log('Search changed:', e.target.value);
-    // }
+    setSearchQuery(e.target.value);
+    
+    // Проверьте после микротаска (после обновления состояния React)
+    setTimeout(() => {
+      console.log('After search change timeout check', 
+        'activeElement before:', activeElementBefore?.id,
+        'activeElement now:', document.activeElement?.id,
+        'same?', activeElementBefore === document.activeElement
+      );
+      
+      // Если фокус потерян, восстановите его
+      if (activeElementBefore !== document.activeElement && searchInputRef.current) {
+        console.log('Focus was lost during search update, restoring');
+        searchInputRef.current.focus();
+      }
+    }, 0);
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    console.log('Search input keydown:', e.key);
+    if (e.key === 'Enter') {
+      console.log('Enter pressed, updating debounced query');
+      setDebouncedSearchQuery(searchQuery);
+    }
+  };
+
+  const handleSearchFocus = () => {
+    console.log('Search input focused');
+  };
+
+  const handleSearchBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    console.log('Search input blurred, relatedTarget:', 
+      e.relatedTarget?.tagName, 
+      e.relatedTarget?.id
+    );
+  };
+
+  // Функция принудительного восстановления фокуса
+  const refocusSearchInput = useCallback(() => {
+    if (searchInputRef.current) {
+      console.log('Forcing refocus to search input');
+      searchInputRef.current.focus();
+    }
+  }, []);
+
+  // Добавляем обработчик клика для всего компонента
+  const handleComponentClick = (e: React.MouseEvent) => {
+    if (document.activeElement !== searchInputRef.current) {
+      console.log('Click detected when search is not focused', 
+        'clicked:', (e.target as HTMLElement)?.tagName,
+        'active:', document.activeElement?.tagName
+      );
+    }
   };
 
   // Main table component
   const TableComponent = () => (
     <div 
       className="instructions-table-container"
+      onClick={handleComponentClick}
+      onMouseDown={(e) => {
+        console.log('Table container mousedown:', 
+          (e.target as HTMLElement)?.tagName, 
+          (e.target as HTMLElement)?.id,
+          'activeElement:', 
+          document.activeElement?.tagName,
+          document.activeElement?.id
+        );
+      }}
     >
-      {/* {debugMode && (
-        <div className="debug-panel" style={{ 
-          position: 'fixed', 
-          top: '10px', 
-          right: '10px', 
-          background: 'rgba(0,0,0,0.7)', 
-          color: 'white', 
-          padding: '10px', 
-          borderRadius: '5px', 
-          zIndex: 9999,
-          maxWidth: '300px'
-        }}>
-          <h4>Отладка фокуса:</h4>
-          <p>Последнее событие: {lastFocusEvent}</p>
-          <p>Активный элемент: {document.activeElement?.tagName || 'none'}</p>
-          <p>Поле ввода в фокусе: {document.activeElement === searchInputRef.current ? 'Да' : 'Нет'}</p>
-          <button onClick={() => setDebugMode(false)}>Выключить отладку</button>
-        </div>
-      )} */}
-      
       <div className="table-controls">
         <div className="search-filter">
           <input
+            ref={searchInputRef}
             type="text"
             id="search-instructions"
             name="search-instructions"
             placeholder="Search instructions..."
             value={searchQuery}
             onChange={handleSearchChange}
+            onKeyDown={handleSearchKeyDown}
+            onFocus={handleSearchFocus}
+            onBlur={handleSearchBlur}
             className="search-input"
-            ref={searchInputRef}
-            onSelect={e => {
-              // if (debugMode) {
-              //   console.log('Selection changed', e.currentTarget.selectionStart, e.currentTarget.selectionEnd);
-              // }
-            }}
-            onMouseDown={handleSearchInputMouseDown}
-            // Предотвращаем потерю фокуса при клике внутри поля ввода
-            onClick={e => e.stopPropagation()}
-            // Отключаем автофокус, если он был включен браузером
-            autoFocus={false}
           />
+          
+          <button 
+            type="button" 
+            onClick={refocusSearchInput}
+            className="debug-focus-button"
+            style={{ fontSize: '12px', padding: '2px 5px', marginLeft: '5px' }}
+          >
+            Вернуть фокус
+          </button>
           
           <select
             value={selectedCategory}
@@ -635,8 +602,6 @@ const InstructionsTable: React.FC = () => {
             className="category-select"
             id="category-filter"
             name="category-filter"
-            // Предотвращаем потерю фокуса при открытии/закрытии выпадающего списка
-            onMouseDown={e => e.stopPropagation()}
           >
             <option value="">All categories</option>
             {categories.map((category) => (
@@ -689,8 +654,28 @@ const InstructionsTable: React.FC = () => {
         </div>
       </div>
       
-      <div className="table-wrapper">
-        <table tabIndex={-1} style={{ width: table.getTotalSize() }} onClick={e => e.stopPropagation()}>
+      <div 
+        className="table-wrapper"
+        onScroll={() => {
+          console.log('Table scroll, activeElement:', 
+            document.activeElement?.tagName,
+            document.activeElement?.id
+          );
+        }}
+      >
+        <table 
+          tabIndex={-1}
+          style={{ width: table.getTotalSize() }}
+          onClick={(e) => {
+            console.log('Table click:', 
+              (e.target as HTMLElement)?.tagName, 
+              (e.target as HTMLElement)?.className,
+              'activeElement:', 
+              document.activeElement?.tagName,
+              document.activeElement?.id
+            );
+          }}
+        >
           <thead>
             {table.getHeaderGroups().map(headerGroup => (
               <tr key={headerGroup.id}>
@@ -723,24 +708,7 @@ const InstructionsTable: React.FC = () => {
                       {/* Resizer */}
                       <div
                         {...{
-                          onMouseDown: (e) => {
-                            // Сохраняем текущий активный элемент перед началом ресайзинга
-                            const activeElement = document.activeElement;
-                            
-                            // Предотвращаем потерю фокуса при начале ресайзинга
-                            e.preventDefault();
-                            
-                            // Вызываем обработчик ресайзинга
-                            header.getResizeHandler()(e);
-                            
-                            // Восстанавливаем фокус, если он был на поле ввода
-                            if (activeElement && activeElement instanceof HTMLInputElement && 
-                                document.contains(activeElement)) {
-                              requestAnimationFrame(() => {
-                                activeElement.focus();
-                              });
-                            }
-                          },
+                          onMouseDown: header.getResizeHandler(),
                           onTouchStart: header.getResizeHandler(),
                           className: `resizer ${isColumnResizing(header.column.id) ? 'isResizing' : ''}`,
                         }}
@@ -751,21 +719,18 @@ const InstructionsTable: React.FC = () => {
               </tr>
             ))}
           </thead>
-          <tbody>
+          <tbody tabIndex={-1}>
             {table.getRowModel().rows.map(row => (
-              <tr key={row.id}>
+              <tr key={row.id} tabIndex={-1}>
                 {row.getVisibleCells().map(cell => {
-                  if (!cell.column.id) return null;
-                  
-                  if (!visibleColumns[cell.column.id]) {
-                    return null;
-                  }
+                  if (!cell.column.id || !visibleColumns[cell.column.id]) return null;
                   
                   return (
                     <td 
                       key={cell.id}
                       style={{ width: cell.column.getSize() }}
                       data-content={String(flexRender(cell.column.columnDef.cell, cell.getContext()))}
+                      tabIndex={-1}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
