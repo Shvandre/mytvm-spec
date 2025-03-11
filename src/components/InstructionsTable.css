@@ -379,6 +379,12 @@ td:nth-child(4) {
   padding: 0.3rem 0.5rem;
 }
 
+/* Моноширинный шрифт для столбцов Mnemonic и Fift */
+td:nth-child(1), /* Mnemonic - первый столбец */
+td:nth-child(7) /* Fift - седьмой столбец */ {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+}
+
 @media (max-width: 768px) {
   .search-filter {
     flex-direction: column;
