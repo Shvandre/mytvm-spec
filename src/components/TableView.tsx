@@ -153,14 +153,30 @@ const TableView: React.FC<TableViewProps> = ({
               {row.getVisibleCells().map(cell => {
                 if (!cell.column.id || !visibleColumns[cell.column.id]) return null;
                 
+                // Получаем значение ячейки для отображения
+                const cellValue = flexRender(cell.column.columnDef.cell, cell.getContext());
+                
+                // Получаем текстовое представление для data-content
+                let cellContent;
+                if (cell.column.id === 'description' && row.original.doc?.description) {
+                  cellContent = row.original.doc.description;
+                } else if (cell.column.id === 'mnemonic' && row.original.mnemonic) {
+                  cellContent = row.original.mnemonic;
+                } else if (typeof cell.getValue() === 'string') {
+                  cellContent = cell.getValue() as string;
+                } else {
+                  // Для остальных случаев берем то, что можно преобразовать в строку
+                  cellContent = String(cell.getValue() || '');
+                }
+                
                 return (
                   <td 
                     key={cell.id}
                     style={{ width: cell.column.getSize() }}
-                    data-content={String(flexRender(cell.column.columnDef.cell, cell.getContext()))}
+                    data-content={cellContent}
                     tabIndex={-1}
                   >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    <span>{cellValue}</span>
                   </td>
                 );
               })}
