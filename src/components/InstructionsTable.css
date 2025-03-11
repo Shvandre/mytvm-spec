@@ -359,37 +359,9 @@ td:hover span {
   color: var(--text-color);
 }
 
-/* Стиль для всплывающей подсказки при наведении */
-td:hover::after {
-  content: attr(data-content);
-  position: absolute;
-  left: 0;
-  top: 100%;
-  min-width: 100%;
-  width: auto;
-  max-width: 400px;
-  white-space: normal;
-  word-break: break-word;
-  background-color: var(--card-bg, var(--bg-color));
-  border: 1px solid var(--border-color);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  padding: 0.65rem 1rem;
-  border-radius: 4px;
-  z-index: 30;
-  color: var(--text-color);
-  pointer-events: none; /* Предотвращаем "мерцание" при движении мыши */
-}
-
-/* Обработка ячеек у правого края */
-td:nth-last-child(-n+2):hover::after {
-  left: auto;
-  right: 0;
-}
-
-/* Для строк у нижнего края таблицы */
-tr:nth-last-child(-n+3) td:hover::after {
-  top: auto;
-  bottom: 100%;
+/* Скрываем всплывающую подсказку при наведении */
+td:hover::after, td:nth-last-child(-n+2):hover::after, tr:nth-last-child(-n+3) td:hover::after {
+  display: none; /* Отключаем полностью второй эффект всплывающей подсказки */
 }
 
 .search-container {
