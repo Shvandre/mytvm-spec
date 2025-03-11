@@ -381,7 +381,17 @@ td:nth-child(4) {
 
 /* Моноширинный шрифт для столбцов Mnemonic и Fift */
 td:nth-child(1), /* Mnemonic - первый столбец */
+td:nth-child(5), /* Opcode - пятый столбец */
 td:nth-child(7) /* Fift - седьмой столбец */ {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+}
+
+/* Моноширинный шрифт для технических столбцов на основе классов */
+.cell-mnemonic,
+.cell-opcode,
+.cell-fift,
+.cell-tlb,
+.cell-prefix {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
 }
 

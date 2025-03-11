@@ -176,6 +176,7 @@ const TableView: React.FC<TableViewProps> = ({
                     style={{ width: cell.column.getSize() }}
                     data-content={cellContent}
                     tabIndex={-1}
+                    className={`cell-${cell.column.id}`}
                   >
                     {cell.column.id === 'description' ? (
                       <span className="markdown-content">
