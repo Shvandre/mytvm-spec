@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
 import {
   flexRender,
   getCoreRowModel,
@@ -176,7 +177,13 @@ const TableView: React.FC<TableViewProps> = ({
                     data-content={cellContent}
                     tabIndex={-1}
                   >
-                    <span>{cellValue}</span>
+                    {cell.column.id === 'description' ? (
+                      <span className="markdown-content">
+                        <ReactMarkdown>{cellContent}</ReactMarkdown>
+                      </span>
+                    ) : (
+                      <span>{cellValue}</span>
+                    )}
                   </td>
                 );
               })}
